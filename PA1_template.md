@@ -9,7 +9,7 @@ Reproducible Research assignment 1: Daily activity monitoring
 
 
 
-Note: Rstudio is being funny. The html was knit from this .Rmd file using the following:
+Note: Rstudio is being funny. To produce html from this .Rmd file, do the following:
 ```
 library(knitr)
 library(markdown)
@@ -19,31 +19,49 @@ markdownToHTML('PA1_template.md','PA1_template.html')
 
 ## Loading and preprocessing the data
 load the data here. 
-```{r}
+
+```r
 data<-read.csv('activity.csv')
 stepsPerDay<-aggregate(steps~date,data,sum)
 ```
 plot steps taken per day
-```{r}
+
+```r
 library(ggplot2)
 g<-ggplot(data=stepsPerDay,aes(steps)) 
 labels<- labs(x='steps per day')
 g+  geom_histogram(fill='green') + labels
+```
 
 ```
+## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+```
+
+![plot of chunk unnamed-chunk-2](figure/unnamed-chunk-2-1.png)
 
 
 ## What is mean total number of steps taken per day?
 
-```{r}
+
+```r
 themean=mean(stepsPerDay$steps)
 themedian=median(stepsPerDay$steps)
 ```
-```{r}
+
+```r
 themean
 ```
-```{r}
+
+```
+## [1] 10766.19
+```
+
+```r
 themedian
+```
+
+```
+## [1] 10765
 ```
 
 
