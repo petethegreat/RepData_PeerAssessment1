@@ -22,6 +22,8 @@ load the data here. Load the data from the csv as "data", casting the "date" fie
 ```r
 data<-read.csv('activity.csv')
 data$date <- as.Date(data$date)
+data$weekday <- weekdays(data$date)
+
 stepsPerDay<-aggregate(steps~date,data,sum)
 stepsPerInterval<-aggregate(steps~interval,data,mean)
 ```
@@ -29,6 +31,13 @@ plot steps taken per day
 
 ```r
 library(ggplot2)
+```
+
+```
+## Warning: package 'ggplot2' was built under R version 3.1.3
+```
+
+```r
 g<-ggplot(data=stepsPerDay,aes(steps),na.rm=TRUE) 
 labels<- labs(x='steps per day')
 g+  geom_histogram(fill='green',binwidth=1000) + labels
@@ -96,7 +105,7 @@ dim(data)
 ```
 
 ```
-## [1] 17568     3
+## [1] 17568     4
 ```
 
 ```r
@@ -110,22 +119,19 @@ Quite a bit. How are the missing values distributed by day? Group steps by day, 
 
 ```r
 suppressMessages(library(dplyr))
+```
+
+```
+## Warning: package 'dplyr' was built under R version 3.1.3
+```
+
+```r
 missByDay<- data %>% select(date,steps) %>% group_by(date) %>% summarise_each(funs(themiss=sum(is.na(.))))
 missByDay %>% filter(themiss > 0)
 ```
 
 ```
-## # A tibble: 8 × 2
-##         date themiss
-##       <date>   <int>
-## 1 2012-10-01     288
-## 2 2012-10-08     288
-## 3 2012-11-01     288
-## 4 2012-11-04     288
-## 5 2012-11-09     288
-## 6 2012-11-10     288
-## 7 2012-11-14     288
-## 8 2012-11-30     288
+## Error in eval(expr, envir, enclos): object 'themiss' not found
 ```
 So for each of these 8 days, the steps data for every interval is missing. That makes life easier, as we're not sampling some intervals more often than others.
 
@@ -133,7 +139,6 @@ Impute things.
 
 
 ```r
-data$weekday <- weekdays(data$date)
 stepsPerWeekday<-aggregate(steps~weekday,data,sum)
 ```
 Compute the mean (median?) steps  grouped by weekday  and interval 
@@ -164,4 +169,54 @@ g
 
 ![plot of chunk unnamed-chunk-13](figure/unnamed-chunk-13-1.png)
 
+Choose mean, just because.
+Copy data to imputed dataframe
+
+This question on [stackoverflow](http://stackoverflow.com/questions/35670213/replace-values-in-some-rows-based-on-other-dataframe-mapping-with-r) was helpful.
+
+left join impData with lookup (keeps all rows of impData, pulls things from lookup)
+copy meansteps to steps for rows where steps is NA, then drop the meansteps column
+
+
+```r
+thecolumn<-"medsteps"
+impData<-data
+impData <- impData  %>% left_join( select(lookup,c(interval,weekday,meansteps,medsteps)),by=c("weekday"="weekday","interval"="interval"))
+impData[is.na(impData$steps),"steps"]<-impData[is.na(impData$steps),thecolumn]
+impData <- impData %>% select(date,interval,weekday,steps)
+```
+
+make a histogram of total steps, same as for part 1 above, but using the imputed data
+
+```r
+stepsPerDayi<-aggregate(steps~date,impData,sum)
+g<-ggplot(data=stepsPerDayi,aes(steps),na.rm=TRUE) 
+labels<- labs(x='steps per day',title='imputed data')
+g+  geom_histogram(fill='green',binwidth=1000) + labels
+```
+
+![plot of chunk unnamed-chunk-15](figure/unnamed-chunk-15-1.png)
+
+mean and median daily steps after imputation
+
+```r
+mean(stepsPerDayi$steps)
+```
+
+```
+## [1] 9705.238
+```
+
+```r
+median(stepsPerDayi$steps)
+```
+
+```
+## [1] 10395
+```
+
+
+
 ## Are there differences in activity patterns between weekdays and weekends?
+
+

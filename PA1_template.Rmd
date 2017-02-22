@@ -119,10 +119,28 @@ copy meansteps to steps for rows where steps is NA, then drop the meansteps colu
 ```{r}
 thecolumn<-"meansteps"
 impData<-data
-impData <-impData %>% filter(is.na(steps)) %>% left_join( select(lookup,c(interval,weekday,measteps)),by=c("weekday"="weekday","interval"="interval"))
-impData[is.na(steps),"steps"]<-impData[is.na(steps),thecolumn]
-impData <- impData(select("date","interval","weekday","steps"))
+impData <- impData  %>% left_join( select(lookup,c(interval,weekday,meansteps,medsteps)),by=c("weekday"="weekday","interval"="interval"))
+impData[is.na(impData$steps),"steps"]<-impData[is.na(impData$steps),thecolumn]
+impData <- impData %>% select(date,interval,weekday,steps)
 ```
+
+make a histogram of total steps, same as for part 1 above, but using the imputed data
+```{r}
+stepsPerDayi<-aggregate(steps~date,impData,sum)
+g<-ggplot(data=stepsPerDayi,aes(steps),na.rm=TRUE) 
+labels<- labs(x='steps per day',title='imputed data')
+g+  geom_histogram(fill='green',binwidth=1000) + labels
+```
+
+mean and median daily steps after imputation
+```{r}
+mean(stepsPerDayi$steps)
+median(stepsPerDayi$steps)
+```
+These are a little different, because reasons
+
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+
