@@ -7,7 +7,7 @@ output:
 Reproducible Research assignment 1: Daily activity monitoring
 ==============================================================
 
-Note: Rstudio is being funny. The html was knit from this .Rmd file using the following:
+Note: Rstudio is being funny. Using the following to knit HTML from the .Rmd
 
 ```
 library(knitr)
@@ -17,20 +17,32 @@ markdownToHTML('PA1_template.md','PA1_template.html')
 ```
 
 ## Loading and preprocessing the data
-load the data here. Load the data from the csv as "data", casting the "date" field as a date class. Do some aggregation, calculate total steps per day and mean steps per interval. 
+load the data here. Load the data from the csv as "data", casting the "date" field as a date class. Also load ggplot2 and dplyr while we're at it.
 
 ```r
 data<-read.csv('activity.csv')
 data$date <- as.Date(data$date)
 data$weekday <- weekdays(data$date)
 
-stepsPerDay<-aggregate(steps~date,data,sum)
-stepsPerInterval<-aggregate(steps~interval,data,mean)
+suppressMessages(library(ggplot2))
 ```
-plot steps taken per day
+
+```
+## Warning: package 'ggplot2' was built under R version 3.1.3
+```
 
 ```r
-library(ggplot2)
+suppressMessages(library(dplyr))
+```
+
+```
+## Warning: package 'dplyr' was built under R version 3.1.3
+```
+
+Use the ``aggregate`` function to compute total steps per day, then plot steps taken per day as a histogram. This uses the ggplot2 package.
+
+```r
+stepsPerDay<-aggregate(steps~date,data,sum)
 g<-ggplot(data=stepsPerDay,aes(steps,fill=..count..),na.rm=TRUE) 
 labels<- labs(x='steps per day')
 g+  geom_histogram(binwidth=1000) + labels
@@ -40,6 +52,7 @@ g+  geom_histogram(binwidth=1000) + labels
 
 
 ## What is mean total number of steps taken per day?
+Get the mean and median steps per day using the mean and median functions on the stepsPerDay dataframe.
 
 
 ```r
@@ -65,10 +78,12 @@ themedian
 That's pretty good. My phone says I did 65k steps last week.
 
 ## What is the average daily activity pattern?
-Want a plot of steps per 5-min interval, averaged over all days
-Use the ```aggregate``` function to get this data
+
+Want to plot steps per 5-min interval, averaged over all days
+Use the ```aggregate``` function to get this data.
 
 ```r
+stepsPerInterval<-aggregate(steps~interval,data,mean)
 g<-ggplot(data=stepsPerInterval,aes(interval,steps,colour='red')) 
 labels<- labs(x='interval',y='mean steps per 5 minute interval')
 g+  geom_line() + labels
@@ -77,6 +92,7 @@ g+  geom_line() + labels
 ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6-1.png)
 
 Which 5 minute interval, on average, contains the most steps?
+Max would give us the maximum value of steps. Use ```which.max()``` to get the row that contains the maximum.
 
 ```r
 stepsPerInterval[which.max(stepsPerInterval$steps),]
@@ -86,7 +102,7 @@ stepsPerInterval[which.max(stepsPerInterval$steps),]
 ##     interval    steps
 ## 104      835 206.1698
 ```
-interval 835 (206 steps)
+interval 835 (206 steps). Presumably this is 8.35-8.40 am? Subject could be walking to work.
 
 
 ## Imputing missing values
@@ -111,15 +127,15 @@ sum(is.na(data$steps))
 Quite a bit. How are the missing values distributed by day? Group steps by day, sum the NA values for each group.
 
 ```r
-suppressMessages(library(dplyr))
-missByDay<- data %>% select(date,steps) %>% group_by(date) %>% summarise_each(funs(themiss=sum(is.na(.))))
-missByDay %>% filter(themiss > 0)
+missByDay<- data %>% select(date,steps) %>% group_by(date) %>% summarise_each(funs(sum(is.na(.))),missing=steps)
+missByDay %>% filter(missing > 0)
 ```
 
 ```
-## # A tibble: 8 × 2
-##         date themiss
-##       <date>   <int>
+## Source: local data frame [8 x 2]
+## 
+##         date missing
+##       (date)   (int)
 ## 1 2012-10-01     288
 ## 2 2012-10-08     288
 ## 3 2012-11-01     288
@@ -131,13 +147,10 @@ missByDay %>% filter(themiss > 0)
 ```
 So for each of these 8 days, the steps data for every interval is missing. That makes life easier, as we're not sampling some intervals more often than others.
 
-Impute things. 
+#### Impute things. 
 
+Compute the mean and median steps grouped by weekday and interval, with missing values omitted. Store this information in a dataFrame called lookup, as it will be used as a lookup table for the imputation.
 
-```r
-stepsPerWeekday<-aggregate(steps~weekday,data,sum)
-```
-Compute the mean (median?) steps  grouped by weekday  and interval 
 
 ```r
 data$weekday = weekdays(data$date)
@@ -145,33 +158,9 @@ lookup<- data %>% select(steps,weekday,interval) %>% group_by(weekday,interval) 
  summarize_each(funs(meansteps=mean(.,na.rm=TRUE),medsteps=median(.,na.rm=TRUE)))
 ```
 
-plot the mean steps per weekday/interval
+Impute the missing values. First copy data as impData. Left join impData with lookup, based on weekday and interval. This will add the meansteps and medsteps columns from lookup to impData, based on when the weekday and interval columns match. Left join is good, as rows will not be deleted from impData if there is no match in lookup (even though this shouldn't occur). Now every row in impData has mean and median step data. For rows in which steps is missing (```is.na()```), copy meansteps to steps. Finally, delete the meansteps and mediansteps columns from impData. Note that as the mean is not an integer, some rows in steps will have non-integer values after imputation. Not a big deal.
 
-
-```r
-g<- ggplot(aes(x=interval,y=meansteps,colour=weekday),data=lookup) + geom_line()
-g
-```
-
-![plot of chunk unnamed-chunk-12](figure/unnamed-chunk-12-1.png)
-
-plot the median
-
-
-```r
-g<- ggplot(aes(x=interval,y=medsteps,colour=weekday),data=lookup) + geom_line()
-g
-```
-
-![plot of chunk unnamed-chunk-13](figure/unnamed-chunk-13-1.png)
-
-Choose mean, just because.
-Copy data to imputed dataframe
-
-This question on [stackoverflow](http://stackoverflow.com/questions/35670213/replace-values-in-some-rows-based-on-other-dataframe-mapping-with-r) was helpful.
-
-left join impData with lookup (keeps all rows of impData, pulls things from lookup)
-copy meansteps to steps for rows where steps is NA, then drop the meansteps column
+(This question on [stackoverflow](http://stackoverflow.com/questions/35670213/replace-values-in-some-rows-based-on-other-dataframe-mapping-with-r) was helpful).
 
 
 ```r
@@ -181,8 +170,9 @@ impData <- impData  %>% left_join( select(lookup,c(interval,weekday,meansteps,me
 impData[is.na(impData$steps),"steps"]<-impData[is.na(impData$steps),thecolumn]
 impData <- impData %>% select(date,interval,weekday,steps)
 ```
+#### Plot the imputed data.
 
-make a histogram of total steps, same as for part 1 above, but using the imputed data
+Make a histogram of total steps, same as for part 1 above, but using the imputed data.
 
 ```r
 stepsPerDayi<-aggregate(steps~date,impData,sum)
@@ -191,9 +181,10 @@ labels<- labs(x='steps per day',title='imputed data')
 g+  geom_histogram(binwidth=1000) + labels
 ```
 
-![plot of chunk unnamed-chunk-15](figure/unnamed-chunk-15-1.png)
+![plot of chunk unnamed-chunk-12](figure/unnamed-chunk-12-1.png)
 
-mean and median daily steps after imputation
+Compute the mean and median daily steps after imputation.
+
 
 ```r
 mean(stepsPerDayi$steps)
@@ -210,26 +201,31 @@ median(stepsPerDayi$steps)
 ```
 ## [1] 11015
 ```
-These are a little different, because reasons
+These are a little different, but not much. We are looking at the mean steps per day, whereas we imputed by mean steps per interval/weekday, so should not expect the mean to remain unchanged (or the median, for that matter).
 
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
-scatterplot steps vs interval for weekdays and weekends
+scatterplot steps vs. interval for weekdays and weekends
+** want average steps per interval**
 
 
 ```r
 impData$weekend<- factor(impData$weekday %in% c('Saturday','Sunday'),labels=c('Weekday','Weekend'))
-g<- ggplot(data=impData,aes(x=interval,y=steps,colour=steps))
-g+ geom_point() + facet_grid(.~weekend) + scale_colour_gradientn(colours=c('purple','red')) + geom_smooth()
+impStepsPerInterval<-aggregate(steps~interval+weekend,data=impData,mean)
+g<- ggplot(data=impStepsPerInterval,aes(x=interval,y=steps,colour=steps))
+
+# I also like this plot
+h<- ggplot(data=impData,aes(x=interval,y=steps,colour=steps))
+labels<-labs(x="interval",y="mean steps per interval")
+title<- ggtitle("Mean Steps per 5 Minute Interval, for Weekdays and Weekends")
+g+ geom_point() + facet_grid(.~weekend) +
+	scale_colour_gradientn(colours=c('purple','red')) +
+	geom_smooth() + labels + title
 ```
 
-```
-## `geom_smooth()` using method = 'gam'
-```
-
-![plot of chunk unnamed-chunk-17](figure/unnamed-chunk-17-1.png)
+![plot of chunk unnamed-chunk-14](figure/unnamed-chunk-14-1.png)
 
 Yup, there are differences. Subject tends to be more active earlier in the day during the week, and more active later in the day during the weekend.
 
