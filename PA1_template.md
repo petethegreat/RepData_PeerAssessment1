@@ -31,16 +31,9 @@ plot steps taken per day
 
 ```r
 library(ggplot2)
-```
-
-```
-## Warning: package 'ggplot2' was built under R version 3.1.3
-```
-
-```r
-g<-ggplot(data=stepsPerDay,aes(steps),na.rm=TRUE) 
+g<-ggplot(data=stepsPerDay,aes(steps,fill=..count..),na.rm=TRUE) 
 labels<- labs(x='steps per day')
-g+  geom_histogram(fill='green',binwidth=1000) + labels
+g+  geom_histogram(binwidth=1000) + labels
 ```
 
 ![plot of chunk unnamed-chunk-2](figure/unnamed-chunk-2-1.png)
@@ -119,19 +112,22 @@ Quite a bit. How are the missing values distributed by day? Group steps by day, 
 
 ```r
 suppressMessages(library(dplyr))
-```
-
-```
-## Warning: package 'dplyr' was built under R version 3.1.3
-```
-
-```r
 missByDay<- data %>% select(date,steps) %>% group_by(date) %>% summarise_each(funs(themiss=sum(is.na(.))))
 missByDay %>% filter(themiss > 0)
 ```
 
 ```
-## Error in eval(expr, envir, enclos): object 'themiss' not found
+## # A tibble: 8 × 2
+##         date themiss
+##       <date>   <int>
+## 1 2012-10-01     288
+## 2 2012-10-08     288
+## 3 2012-11-01     288
+## 4 2012-11-04     288
+## 5 2012-11-09     288
+## 6 2012-11-10     288
+## 7 2012-11-14     288
+## 8 2012-11-30     288
 ```
 So for each of these 8 days, the steps data for every interval is missing. That makes life easier, as we're not sampling some intervals more often than others.
 
@@ -179,7 +175,7 @@ copy meansteps to steps for rows where steps is NA, then drop the meansteps colu
 
 
 ```r
-thecolumn<-"medsteps"
+thecolumn<-"meansteps"
 impData<-data
 impData <- impData  %>% left_join( select(lookup,c(interval,weekday,meansteps,medsteps)),by=c("weekday"="weekday","interval"="interval"))
 impData[is.na(impData$steps),"steps"]<-impData[is.na(impData$steps),thecolumn]
@@ -190,9 +186,9 @@ make a histogram of total steps, same as for part 1 above, but using the imputed
 
 ```r
 stepsPerDayi<-aggregate(steps~date,impData,sum)
-g<-ggplot(data=stepsPerDayi,aes(steps),na.rm=TRUE) 
+g<-ggplot(data=stepsPerDayi,aes(steps,fill=..count..),na.rm=TRUE) 
 labels<- labs(x='steps per day',title='imputed data')
-g+  geom_histogram(fill='green',binwidth=1000) + labels
+g+  geom_histogram(binwidth=1000) + labels
 ```
 
 ![plot of chunk unnamed-chunk-15](figure/unnamed-chunk-15-1.png)
@@ -204,7 +200,7 @@ mean(stepsPerDayi$steps)
 ```
 
 ```
-## [1] 9705.238
+## [1] 10821.21
 ```
 
 ```r
@@ -212,11 +208,29 @@ median(stepsPerDayi$steps)
 ```
 
 ```
-## [1] 10395
+## [1] 11015
 ```
+These are a little different, because reasons
 
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+scatterplot steps vs interval for weekdays and weekends
+
+
+```r
+impData$weekend<- factor(impData$weekday %in% c('Saturday','Sunday'),labels=c('Weekday','Weekend'))
+g<- ggplot(data=impData,aes(x=interval,y=steps,colour=steps))
+g+ geom_point() + facet_grid(.~weekend) + scale_colour_gradientn(colours=c('purple','red')) + geom_smooth()
+```
+
+```
+## `geom_smooth()` using method = 'gam'
+```
+
+![plot of chunk unnamed-chunk-17](figure/unnamed-chunk-17-1.png)
+
+Yup, there are differences. Subject tends to be more active earlier in the day during the week, and more active later in the day during the weekend.
 
 
