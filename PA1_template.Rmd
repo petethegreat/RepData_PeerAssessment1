@@ -17,19 +17,20 @@ markdownToHTML('PA1_template.md','PA1_template.html')
 ```
 
 ## Loading and preprocessing the data
-load the data here. Load the data from the csv as "data", casting the "date" field as a date class. Do some aggregation, calculate total steps per day and mean steps per interval. 
+load the data here. Load the data from the csv as "data", casting the "date" field as a date class. Also load ggplot2 and dplyr while we're at it.
 ```{r}
 data<-read.csv('activity.csv')
 data$date <- as.Date(data$date)
 data$weekday <- weekdays(data$date)
 
-stepsPerDay<-aggregate(steps~date,data,sum)
-stepsPerInterval<-aggregate(steps~interval,data,mean)
+suppressMessages(library(ggplot2))
+suppressMessages(library(dplyr))
 
 ```
-plot steps taken per day
+
+Use the ``aggregate`` function to compute total steps per day, then plot steps taken per day as a histogram. This uses the ggplot2 package.
 ```{r}
-library(ggplot2)
+stepsPerDay<-aggregate(steps~date,data,sum)
 g<-ggplot(data=stepsPerDay,aes(steps,fill=..count..),na.rm=TRUE) 
 labels<- labs(x='steps per day')
 g+  geom_histogram(binwidth=1000) + labels
@@ -37,6 +38,7 @@ g+  geom_histogram(binwidth=1000) + labels
 
 
 ## What is mean total number of steps taken per day?
+Get the mean and median steps per day using the mean and median functions on the stepsPerDay dataframe.
 
 ```{r}
 themean=mean(stepsPerDay$steps)
@@ -51,9 +53,11 @@ themedian
 That's pretty good. My phone says I did 65k steps last week.
 
 ## What is the average daily activity pattern?
-Want a plot of steps per 5-min interval, averaged over all days
-Use the ```aggregate``` function to get this data
+
+Want to plot steps per 5-min interval, averaged over all days
+Use the ```aggregate``` function to get this data.
 ```{r}
+stepsPerInterval<-aggregate(steps~interval,data,mean)
 g<-ggplot(data=stepsPerInterval,aes(interval,steps,colour='red')) 
 labels<- labs(x='interval',y='mean steps per 5 minute interval')
 g+  geom_line() + labels
@@ -75,7 +79,7 @@ sum(is.na(data$steps))
 ```
 Quite a bit. How are the missing values distributed by day? Group steps by day, sum the NA values for each group.
 ```{r}
-suppressMessages(library(dplyr))
+)
 missByDay<- data %>% select(date,steps) %>% group_by(date) %>% summarise_each(funs(themiss=sum(is.na(.))))
 missByDay %>% filter(themiss > 0)
 
