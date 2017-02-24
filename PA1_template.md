@@ -230,20 +230,32 @@ impData$weekend<- factor(impData$weekday %in% c('Saturday','Sunday'),labels=c('W
 
 ```r
 impStepsPerInterval<-aggregate(steps~interval+weekend,data=impData,mean)
-g<- ggplot(data=impStepsPerInterval,aes(x=interval,y=steps,colour=steps))
-
-# I also like this plot
-h<- ggplot(data=impData,aes(x=interval,y=steps,colour=steps))
+g<- ggplot(data=impStepsPerInterval,aes(x=interval,y=steps,colour='red'))
 
 labels<-labs(x="interval",y="mean steps per interval")
 title<- ggtitle("Mean Steps per 5 Minute Interval, for Weekdays and Weekends")
-g+ geom_point() + facet_grid(.~weekend) +
-	scale_colour_gradientn(colours=c('purple','red')) +
-	geom_smooth() + labels + title
+
+g+ geom_line() + facet_grid(.~weekend) +
+	labels + title
 ```
 
 ![plot of chunk unnamed-chunk-15](figure/unnamed-chunk-15-1.png)
 
 Yup, there are differences. Subject tends to be more active earlier in the day during the week, and more active later in the day during the weekend.
+
+I also like this plot
+
+
+```r
+# I also like this plot
+h<- ggplot(data=impStepsPerInterval,aes(x=interval,y=steps,colour=steps))
+h + geom_point() + facet_grid(.~weekend) +
+	scale_colour_gradientn(colours=c('purple','red')) +
+	geom_smooth() + labels + title
+```
+
+![plot of chunk unnamed-chunk-16](figure/unnamed-chunk-16-1.png)
+
+
 
 
